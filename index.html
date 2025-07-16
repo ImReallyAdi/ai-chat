@@ -253,11 +253,11 @@
   </div>
 
   <script>
-    const GEMINI_API_KEY = 'AIzaSyDPGjsZkOTnRh8Sqln2p-_4lI3A26XxS0Q'; 
+    const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE'; // Replace with your actual API key
     const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
     
     let currentScenario = null;
-    let gameState = 'waiting_for_scenario';
+    let gameState = 'waiting_for_scenario'; // waiting_for_scenario, waiting_for_user_response, waiting_for_choice, chatting
     let messagesContainer = document.getElementById('messages');
     let messageInput = document.getElementById('messageInput');
     let sendButton = document.getElementById('sendButton');
@@ -362,27 +362,16 @@
       }
 
       // Add the stranger's message
-      const messageDiv = addMessage(currentScenario.message, "stranger", currentScenario.sender_name);
+      addMessage(currentScenario.message, "stranger", currentScenario.sender_name);
       
-      // Add choice buttons
-      const choiceButtons = document.createElement('div');
-      choiceButtons.className = 'choice-buttons';
-      
-      const friendBtn = document.createElement('button');
-      friendBtn.className = 'friend-btn';
-      friendBtn.textContent = '😊 Friend';
-      friendBtn.onclick = () => makeChoice('friend');
-      
-      const bullyBtn = document.createElement('button');
-      bullyBtn.className = 'bully-btn';
-      bullyBtn.textContent = '😠 Bully';
-      bullyBtn.onclick = () => makeChoice('bully');
-      
-      choiceButtons.appendChild(friendBtn);
-      choiceButtons.appendChild(bullyBtn);
-      messageDiv.appendChild(choiceButtons);
-      
-      gameState = 'waiting_for_choice';
+      // Cookie prompts user to respond first
+      setTimeout(() => {
+        addMessage("What would you say back to them? Type your response!", "cookie", "Cookie 🍪");
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+        messageInput.focus();
+        gameState = 'waiting_for_user_response';
+      }, 1000);
     }
 
     function makeChoice(choice) {
@@ -429,26 +418,73 @@
       messageInput.disabled = true;
       sendButton.disabled = true;
       
-      showTyping();
-      
-      const prompt = `You are Cookie, a friendly assistant helping children learn about kindness and bullying. 
-      The child just said: "${message}"
-      
-      Respond in a supportive, encouraging way that helps them understand feelings and social situations. 
-      Keep it simple and age-appropriate for kids 8-12. Be warm and understanding.`;
-      
-      const response = await callGemini(prompt);
-      hideTyping();
-      
-      if (response) {
-        addMessage(response, "cookie", "Cookie 🍪");
-      } else {
-        addMessage("Sorry, I didn't catch that. Can you try again?", "cookie", "Cookie 🍪");
+      if (gameState === 'waiting_for_user_response') {
+        // First response - get stranger's reply, then ask for choice
+        showTyping();
+        
+        const prompt = `You are roleplaying as ${currentScenario.sender_name}, a child who just said: "${currentScenario.message}" 
+        The other child responded: "${message}"
+        
+        You are ${currentScenario.type === 'friend' ? 'trying to be friendly' : 'being mean/bullying'}.
+        Respond as ${currentScenario.sender_name} would, staying in character as a ${currentScenario.type}.
+        Keep it realistic and age-appropriate for kids 8-12. Make it 1-2 sentences.`;
+        
+        const response = await callGemini(prompt);
+        hideTyping();
+        
+        if (response) {
+          addMessage(response, "stranger", currentScenario.sender_name);
+        }
+        
+        // Now Cookie asks them to make their choice
+        setTimeout(() => {
+          const choiceMessage = addMessage("Now, what do you think? Was that person being friendly or mean to you?", "cookie", "Cookie 🍪");
+          
+          // Add choice buttons
+          const choiceButtons = document.createElement('div');
+          choiceButtons.className = 'choice-buttons';
+          
+          const friendBtn = document.createElement('button');
+          friendBtn.className = 'friend-btn';
+          friendBtn.textContent = '😊 Friend';
+          friendBtn.onclick = () => makeChoice('friend');
+          
+          const bullyBtn = document.createElement('button');
+          bullyBtn.className = 'bully-btn';
+          bullyBtn.textContent = '😠 Bully';
+          bullyBtn.onclick = () => makeChoice('bully');
+          
+          choiceButtons.appendChild(friendBtn);
+          choiceButtons.appendChild(bullyBtn);
+          choiceMessage.appendChild(choiceButtons);
+          
+          gameState = 'waiting_for_choice';
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 1000);
+        
+      } else if (gameState === 'chatting') {
+        // Normal conversation with Cookie
+        showTyping();
+        
+        const prompt = `You are Cookie, a friendly assistant helping children learn about kindness and bullying. 
+        The child just said: "${message}"
+        
+        Respond in a supportive, encouraging way that helps them understand feelings and social situations. 
+        Keep it simple and age-appropriate for kids 8-12. Be warm and understanding.`;
+        
+        const response = await callGemini(prompt);
+        hideTyping();
+        
+        if (response) {
+          addMessage(response, "cookie", "Cookie 🍪");
+        } else {
+          addMessage("Sorry, I didn't catch that. Can you try again?", "cookie", "Cookie 🍪");
+        }
+        
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+        messageInput.focus();
       }
-      
-      messageInput.disabled = false;
-      sendButton.disabled = false;
-      messageInput.focus();
     }
 
     function startNewScenario() {
