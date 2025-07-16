@@ -1,2 +1,1 @@
-# ai-chat
-chat
+ly still in beta
