@@ -225,24 +225,7 @@
       30% { opacity: 1; }
     }
 
-    .next-scenario {
-      display: none;
-      text-align: center;
-      margin-top: 1rem;
-    }
-
-    .next-scenario button {
-      padding: 0.75rem 1.5rem;
-      background: var(--accent);
-      border: none;
-      border-radius: 12px;
-      color: var(--dark);
-      font-weight: bold;
-      cursor: pointer;
-      min-height: 44px;
-      touch-action: manipulation;
-    }
-
+    
     /* Mobile-specific styles */
     @media (max-width: 768px) {
       header h1 {
@@ -497,17 +480,8 @@
       messageInput.focus();
       gameState = 'chatting';
       
-      // Add next scenario button after a delay
-      setTimeout(() => {
-        const nextDiv = document.createElement('div');
-        nextDiv.className = 'next-scenario';
-        nextDiv.style.display = 'block';
-        nextDiv.innerHTML = '<button onclick="startNewScenario()">Next Scenario 🔄</button>';
-        messagesContainer.appendChild(nextDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }, 2000);
-    }
-
+    
+     
     async function sendMessage() {
       const message = messageInput.value.trim();
       if (!message) return;
@@ -585,20 +559,7 @@
         messageInput.focus();
       }
     }
-
-    function startNewScenario() {
-      // Remove next scenario button
-      const nextButton = document.querySelector('.next-scenario');
-      if (nextButton) {
-        nextButton.remove();
-      }
-      
-      messageInput.disabled = true;
-      sendButton.disabled = true;
-      
-      generateScenario();
-    }
-
+  
     // Handle Enter key
     messageInput.addEventListener('keypress', function(e) {
       if (e.key === 'Enter' && !sendButton.disabled) {
@@ -610,6 +571,7 @@
     window.onload = function() {
       setTimeout(generateScenario, 1000);
     };
+}
   </script>
 </body>
 </html>
