@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cookie Friend Chat</title>
+  <title>Cookie Chat Game - Imreallyadi</title>
   <style>
     :root {
       --primary: #fde6d5;
@@ -299,7 +299,7 @@
   </div>
 
   <script>
-    const GEMINI_API_KEY = 'AIzaSyDPGjsZkOTnRh8Sqln2p-_4lI3A26XxS0Q';
+    const GEMINI_API_KEY = 'ADD YOUR OWN API KEY'; // Please add your key!
     const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
     
     let currentScenario = null;
@@ -387,7 +387,7 @@
         - Name-calling ("You're so weird", "Only babies like that")
         - Put-downs ("Your drawing looks stupid", "You're bad at everything")
         - Teasing ("Haha you missed the ball again!", "Nice haircut... NOT!")
-        - Threats ("Give me your lunch money", "I won't be your friend anymore")
+        - Threats ("Give me your lunch money", "I won't be your friend anymore") 
         - Making fun ("Everyone thinks you're annoying", "You smell funny")` :
         `For FRIEND examples:
         - Compliments ("I like your shirt!", "You're really good at drawing")
@@ -452,7 +452,7 @@
         choiceButtons.remove();
       }
       
-      // Add user's choice
+      // Add user's choice check $choice works or not.
       addMessage(`I think this is a ${choice}`, "user", "You");
       
       // Cookie's response with explanation
@@ -472,9 +472,9 @@
         cookieResponse += '<br><br>💡 It feels good when people are kind to us, and we should be kind to others too!';
       }
       
-      addMessage(cookieResponse, "cookie", "Cookie 🍪");
+      addMessage(cookieResponse, "cookie", "Cookie 🍪"); //response - json asp
       
-      // Enable input for further conversation
+      // Enable input for further conversation (should be on false)
       messageInput.disabled = false;
       sendButton.disabled = false;
       messageInput.focus();
