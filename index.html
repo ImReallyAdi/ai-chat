@@ -255,7 +255,9 @@
   <script>
     const GEMINI_API_KEY = 'AIzaSyDPGjsZkOTnRh8Sqln2p-_4lI3A26XxS0Q';
     const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
-    
+
+    const themes = ["gaming", "pets", "school lunch", "homework", "sports", "sharing snacks", "group projects", "birthday invites", "new shoes"];
+
     let currentScenario = null;
     let gameState = 'waiting_for_scenario'; 
     let messagesContainer = document.getElementById('messages');
@@ -266,21 +268,17 @@
     function addMessage(content, type, sender = null) {
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${type}`;
-      
       if (sender) {
         const header = document.createElement('div');
         header.className = 'message-header';
         header.textContent = sender;
         messageDiv.appendChild(header);
       }
-      
       const contentDiv = document.createElement('div');
       contentDiv.innerHTML = content;
       messageDiv.appendChild(contentDiv);
-      
       messagesContainer.appendChild(messageDiv);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      
       return messageDiv;
     }
 
@@ -297,76 +295,48 @@
       try {
         const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: prompt
-              }]
-            }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 150
-            }
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.9, maxOutputTokens: 200 }
           })
         });
-
-        if (!response.ok) {
-          throw new Error('API request failed');
-        }
-
+        if (!response.ok) throw new Error('API error');
         const data = await response.json();
         return data.candidates[0].content.parts[0].text;
-      } catch (error) {
-        console.error('Gemini API error:', error);
+      } catch (err) {
+        console.error(err);
         return null;
       }
     }
 
     async function generateScenario() {
       showTyping();
-      
-      const prompt = `Generate a message that could be from either a friend or a bully for a children's game. 
-      The message should be something a child might receive from another child.
-      Respond in JSON format with:
-      {
-        "message": "the actual message text",
-        "type": "friend" or "bully",
-        "sender_name": "a child-friendly name"
-      }
-      
-      Make it realistic but age-appropriate for kids 8-12.`;
+      const theme = themes[Math.floor(Math.random() * themes.length)];
+      const prompt = `You are generating a realistic message a kid aged 8–12 might receive from another kid. 
+The topic should involve ${theme}. It could be friendly or bullying. 
+Return only a JSON object:
+{
+  "message": "text",
+  "type": "friend" or "bully",
+  "sender_name": "kid-friendly name"
+}`;
 
       const response = await callGemini(prompt);
       hideTyping();
-      
-      if (!response) {
-        addMessage("Sorry, I couldn't load a new scenario. Try refreshing!", "system");
-        return;
-      }
+      if (!response) return addMessage("Couldn't load a scenario. Try again!", "system");
 
       try {
-        // Try to parse JSON from the response
-        let jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          currentScenario = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No JSON found');
-        }
-      } catch (e) {
-        console.error('JSON parse error:', e);
-        addMessage("Sorry, I couldn't load a new scenario. Try refreshing!", "system");
-        return;
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        currentScenario = JSON.parse(jsonMatch[0]);
+      } catch {
+        return addMessage("Invalid response. Please refresh!", "system");
       }
 
-      // Add the stranger's message
       addMessage(currentScenario.message, "stranger", currentScenario.sender_name);
-      
-      // Cookie prompts user to respond first
+
       setTimeout(() => {
-        addMessage("What would you say back to them? Type your response!", "cookie", "Cookie 🍪");
+        addMessage("What would you say back to them?", "cookie", "Cookie 🍪");
         messageInput.disabled = false;
         sendButton.disabled = false;
         messageInput.focus();
@@ -375,30 +345,19 @@
     }
 
     function makeChoice(choice) {
-      // Remove choice buttons
-      const choiceButtons = document.querySelector('.choice-buttons');
-      if (choiceButtons) {
-        choiceButtons.remove();
-      }
-      
-      // Add user's choice
+      document.querySelector('.choice-buttons')?.remove();
       addMessage(`I think this is a ${choice}`, "user", "You");
-      
-      // Cookie's response
-      const isCorrect = choice === currentScenario.type;
-      const cookieResponse = isCorrect ? 
-        `✅ You're right! That was a ${currentScenario.type}. ${currentScenario.type === 'friend' ? 'That person was being kind!' : 'That person was being mean.'}` :
-        `❌ Actually, that was a ${currentScenario.type}. ${currentScenario.type === 'friend' ? 'They were trying to be nice!' : 'They were being mean to you.'}`;
-      
-      addMessage(cookieResponse, "cookie", "Cookie 🍪");
-      
-      // Enable input for further conversation
+
+      const correct = choice === currentScenario.type;
+      const cookieMsg = correct ?
+        `✅ You're right! That was a ${choice}.` :
+        `❌ Actually, that was a ${currentScenario.type}.`;
+
+      addMessage(cookieMsg, "cookie", "Cookie 🍪");
       messageInput.disabled = false;
       sendButton.disabled = false;
-      messageInput.focus();
       gameState = 'chatting';
-      
-      // Add next scenario button after a delay
+
       setTimeout(() => {
         const nextDiv = document.createElement('div');
         nextDiv.className = 'next-scenario';
@@ -410,77 +369,47 @@
     }
 
     async function sendMessage() {
-      const message = messageInput.value.trim();
-      if (!message) return;
-      
-      addMessage(message, "user", "You");
+      const msg = messageInput.value.trim();
+      if (!msg) return;
+
+      addMessage(msg, "user", "You");
       messageInput.value = '';
       messageInput.disabled = true;
       sendButton.disabled = true;
-      
+
       if (gameState === 'waiting_for_user_response') {
-        // First response - get stranger's reply, then ask for choice
         showTyping();
-        
-        const prompt = `You are roleplaying as ${currentScenario.sender_name}, a child who just said: "${currentScenario.message}" 
-        The other child responded: "${message}"
-        
-        You are ${currentScenario.type === 'friend' ? 'trying to be friendly' : 'being mean/bullying'}.
-        Respond as ${currentScenario.sender_name} would, staying in character as a ${currentScenario.type}.
-        Keep it realistic and age-appropriate for kids 8-12. Make it 1-2 sentences.`;
-        
+        const prompt = `You're ${currentScenario.sender_name}, a kid who's being a ${currentScenario.type}. 
+You just said: "${currentScenario.message}". 
+Another kid replied: "${msg}". Respond accordingly in 1–2 sentences.`;
         const response = await callGemini(prompt);
         hideTyping();
-        
-        if (response) {
-          addMessage(response, "stranger", currentScenario.sender_name);
-        }
-        
-        // Now Cookie asks them to make their choice
+        if (response) addMessage(response, "stranger", currentScenario.sender_name);
+
         setTimeout(() => {
-          const choiceMessage = addMessage("Now, what do you think? Was that person being friendly or mean to you?", "cookie", "Cookie 🍪");
-          
-          // Add choice buttons
-          const choiceButtons = document.createElement('div');
-          choiceButtons.className = 'choice-buttons';
-          
+          const choiceMsg = addMessage("Now, what do you think? Were they friendly or mean?", "cookie", "Cookie 🍪");
+          const buttons = document.createElement('div');
+          buttons.className = 'choice-buttons';
           const friendBtn = document.createElement('button');
           friendBtn.className = 'friend-btn';
           friendBtn.textContent = '😊 Friend';
           friendBtn.onclick = () => makeChoice('friend');
-          
           const bullyBtn = document.createElement('button');
           bullyBtn.className = 'bully-btn';
           bullyBtn.textContent = '😠 Bully';
           bullyBtn.onclick = () => makeChoice('bully');
-          
-          choiceButtons.appendChild(friendBtn);
-          choiceButtons.appendChild(bullyBtn);
-          choiceMessage.appendChild(choiceButtons);
-          
+          buttons.append(friendBtn, bullyBtn);
+          choiceMsg.appendChild(buttons);
           gameState = 'waiting_for_choice';
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }, 1000);
-        
       } else if (gameState === 'chatting') {
-        // Normal conversation with Cookie
         showTyping();
-        
-        const prompt = `You are Cookie, a friendly assistant helping children learn about kindness and bullying. 
-        The child just said: "${message}"
-        
-        Respond in a supportive, encouraging way that helps them understand feelings and social situations. 
-        Keep it simple and age-appropriate for kids 8-12. Be warm and understanding.`;
-        
+        const prompt = `You're Cookie, helping kids learn about kindness and bullying. A child said: "${msg}". 
+Respond warmly and simply.`;
         const response = await callGemini(prompt);
         hideTyping();
-        
-        if (response) {
-          addMessage(response, "cookie", "Cookie 🍪");
-        } else {
-          addMessage("Sorry, I didn't catch that. Can you try again?", "cookie", "Cookie 🍪");
-        }
-        
+        addMessage(response || "Try again!", "cookie", "Cookie 🍪");
         messageInput.disabled = false;
         sendButton.disabled = false;
         messageInput.focus();
@@ -488,29 +417,17 @@
     }
 
     function startNewScenario() {
-      // Remove next scenario button
-      const nextButton = document.querySelector('.next-scenario');
-      if (nextButton) {
-        nextButton.remove();
-      }
-      
+      document.querySelector('.next-scenario')?.remove();
       messageInput.disabled = true;
       sendButton.disabled = true;
-      
       generateScenario();
     }
 
-    // Handle Enter key
-    messageInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter' && !sendButton.disabled) {
-        sendMessage();
-      }
+    messageInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter' && !sendButton.disabled) sendMessage();
     });
 
-    // Start the game
-    window.onload = function() {
-      setTimeout(generateScenario, 1000);
-    };
+    window.onload = () => setTimeout(generateScenario, 1000);
   </script>
 </body>
 </html>
